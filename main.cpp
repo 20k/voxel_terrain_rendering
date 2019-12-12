@@ -1,8 +1,9 @@
 #include <toolkit/render_window.hpp>
 #include <toolkit/opencl.hpp>
 #include <array>
+#include <SFML/System.hpp>
 
-#define CHUNK_SIZE 128
+#define CHUNK_SIZE 64
 
 struct chunk_descriptor
 {
@@ -78,13 +79,20 @@ int main()
 
     printf("Here\n");
 
-    cl::buffer buf_desc(ctx);
-    buf_desc.alloc(sizeof(chunk_descriptor) * test_level.descriptors.size());
-    buf_desc.write(cqueue, test_level.descriptors);
+    std::vector<cl::buffer> buf_descs;
+    std::vector<cl::buffer> buf_chunks;
 
-    cl::buffer buf_chunks(ctx);
-    buf_chunks.alloc(sizeof(chunk_data) * test_level.chunks.size());
-    buf_chunks.write(cqueue, test_level.chunks);
+    for(int i=0; i < (int)test_level.chunks.size(); i++)
+    {
+        buf_descs.emplace_back(ctx);
+        buf_chunks.emplace_back(ctx);
+
+        buf_descs.back().alloc(sizeof(chunk_descriptor));
+        buf_descs.back().write(cqueue, std::vector<chunk_descriptor>{test_level.descriptors[i]});
+
+        buf_chunks.back().alloc(sizeof(chunk_data));
+        buf_chunks.back().write(cqueue, std::vector<chunk_data>{test_level.chunks[i]});
+    }
 
     printf("Hello\n");
 
