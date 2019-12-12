@@ -2,6 +2,7 @@
 #include <toolkit/opencl.hpp>
 #include <array>
 #include <SFML/System.hpp>
+#include <GLFW/glfw3.h>
 
 #define CHUNK_SIZE 64
 
@@ -96,9 +97,76 @@ int main()
 
     printf("Hello\n");
 
+    vec4f camera_pos = {0,0,0,0};
+    quaternion camera_quat = quaternion().identity();
+
+    sf::Clock clk;
+
     while(!window.should_close())
     {
         window.poll();
+
+        double dt_s = clk.getElapsedTime().asMicroseconds() / 1000. / 1000.;
+
+        if(ImGui::IsKeyDown(GLFW_KEY_W))
+        {
+            camera_pos.z() -= 1000 * dt_s;
+        }
+
+        if(ImGui::IsKeyDown(GLFW_KEY_S))
+        {
+            camera_pos.z() += 1000 * dt_s;
+        }
+
+        if(ImGui::IsKeyDown(GLFW_KEY_D))
+        {
+            camera_pos.x() += 1000 * dt_s;
+        }
+
+        if(ImGui::IsKeyDown(GLFW_KEY_A))
+        {
+            camera_pos.x() -= 1000 * dt_s;
+        }
+
+        if(ImGui::IsKeyDown(GLFW_KEY_E))
+        {
+            camera_pos.y() += 1000 * dt_s;
+        }
+
+        if(ImGui::IsKeyDown(GLFW_KEY_Q))
+        {
+            camera_pos.y() -= 1000 * dt_s;
+        }
+
+        quaternion quat;
+        quat.load_from_axis_angle({0, 1, 0, -M_PI/5 * dt_s});
+
+        if(ImGui::IsKeyDown(GLFW_KEY_RIGHT))
+        {
+            camera_quat = camera_quat * quat;
+        }
+
+        if(ImGui::IsKeyDown(GLFW_KEY_LEFT))
+        {
+            camera_quat = camera_quat * quat.inverse();
+        }
+
+
+        window.clctx->cl_screen_tex.acquire(cqueue);
+
+        for(int i=0; i < (int)buf_descs.size(); i++)
+        {
+            cl::args args;
+            args.push_back(buf_descs[i]);
+            args.push_back(buf_chunks[i]);
+            args.push_back(camera_pos);
+            args.push_back(camera_quat);
+            args.push_back(window.clctx->cl_screen_tex);
+
+            cqueue.exec("render_chunk", args, {CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE}, {16, 16, 1});
+        }
+
+        window.clctx->cl_screen_tex.unacquire(cqueue);
 
         window.display();
     }
