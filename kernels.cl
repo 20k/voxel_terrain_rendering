@@ -33,11 +33,15 @@ struct chunk_descriptor
 
 bool is_visible(__global int* chunks, int3 pos)
 {
-    int3 tl = pos - 1;
-    int3 br = pos + 1;
+    int3 ptl = pos - 1;
+    int3 pbr = pos + 1;
 
-    tl = clamp(tl, 0, CHUNK_SIZE-1);
-    br = clamp(br, 0, CHUNK_SIZE-1);
+    bool clamped = false;
+
+    int3 tl = clamp(ptl, 0, CHUNK_SIZE-1);
+    int3 br = clamp(pbr, 0, CHUNK_SIZE-1);
+
+    clamped = any(tl != ptl) || any(br != pbr);
 
     if(chunks[IDX(pos.x, pos.y, pos.z)] == 0)
         return false;
@@ -61,7 +65,7 @@ bool is_visible(__global int* chunks, int3 pos)
         }
     }
 
-    return false;
+    return clamped;
 }
 
 __kernel

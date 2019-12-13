@@ -162,6 +162,8 @@ int main()
 
 
         rtex.acquire(cqueue);
+        rtex.clear(cqueue);
+        //rtex.clear(). Unify image and cl gl textures
 
         for(int i=0; i < (int)buf_descs.size(); i++)
         {
@@ -177,9 +179,13 @@ int main()
 
         rtex.unacquire(cqueue);
 
+        cqueue.block();
+
+        vec2f screen_pos = {window.get_window_position().x(), window.get_window_position().y()};
+
         vec2f window_dim = {window.get_window_size().x(), window.get_window_size().y()};
 
-        window.render_texture(rtex.texture_id, {0,0}, window_dim);
+        window.render_texture(rtex.texture_id, screen_pos, screen_pos + window_dim);
 
         window.display();
     }
