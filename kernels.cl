@@ -1,4 +1,5 @@
 #define CHUNK_SIZE 64
+#define CELL_DIM 16
 #define FOV_CONST 600.f
 
 float3 depth_project_singular(float3 rotated, float width, float height, float fovc)
@@ -81,10 +82,12 @@ void render_chunk(__global struct chunk_descriptor* my_chunk, __global int* chun
     float screen_width = get_image_width(screen);
     float screen_height = get_image_height(screen);
 
-    float3 world_pos = (float3)(pos.x, pos.y, pos.z) + chunk_pos;
+    float3 world_pos = (float3)(pos.x, pos.y, pos.z) * CELL_DIM + chunk_pos * CHUNK_SIZE * CELL_DIM;
 
-    float3 screen_pos = depth_project_singular(rot_quat(chunk_pos - camera_pos.xyz, camera_quat), screen_width, screen_height, FOV_CONST);
+    float3 screen_pos = depth_project_singular(rot_quat(world_pos - camera_pos.xyz, camera_quat), screen_width, screen_height, FOV_CONST);
 
     if(screen_pos.z < 1 || any(screen_pos.xy < 0) || any(screen_pos.xy >= (float2)(screen_width, screen_height)))
        return;
+
+    write_imagef(screen, (int2)(screen_pos.x, screen_pos.y), (float4)(1,1,1,1));
 }

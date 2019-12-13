@@ -3,6 +3,7 @@
 #include <array>
 #include <SFML/System.hpp>
 #include <GLFW/glfw3.h>
+#include <iostream>
 
 #define CHUNK_SIZE 64
 
@@ -102,11 +103,14 @@ int main()
 
     sf::Clock clk;
 
+    cl::gl_rendertexture rtex(ctx);
+    rtex.create(window.get_window_size().x(), window.get_window_size().y());
+
     while(!window.should_close())
     {
         window.poll();
 
-        double dt_s = clk.getElapsedTime().asMicroseconds() / 1000. / 1000.;
+        double dt_s = clk.restart().asMicroseconds() / 1000. / 1000.;
 
         if(ImGui::IsKeyDown(GLFW_KEY_W))
         {
@@ -138,6 +142,11 @@ int main()
             camera_pos.y() -= 1000 * dt_s;
         }
 
+        if(ImGui::IsKeyDown(GLFW_KEY_N))
+        {
+            std::cout << dt_s << std::endl;
+        }
+
         quaternion quat;
         quat.load_from_axis_angle({0, 1, 0, -M_PI/5 * dt_s});
 
@@ -152,7 +161,7 @@ int main()
         }
 
 
-        window.clctx->cl_screen_tex.acquire(cqueue);
+        rtex.acquire(cqueue);
 
         for(int i=0; i < (int)buf_descs.size(); i++)
         {
@@ -161,12 +170,16 @@ int main()
             args.push_back(buf_chunks[i]);
             args.push_back(camera_pos);
             args.push_back(camera_quat);
-            args.push_back(window.clctx->cl_screen_tex);
+            args.push_back(rtex);
 
             cqueue.exec("render_chunk", args, {CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE}, {16, 16, 1});
         }
 
-        window.clctx->cl_screen_tex.unacquire(cqueue);
+        rtex.unacquire(cqueue);
+
+        vec2f window_dim = {window.get_window_size().x(), window.get_window_size().y()};
+
+        window.render_texture(rtex.texture_id, {0,0}, window_dim);
 
         window.display();
     }
